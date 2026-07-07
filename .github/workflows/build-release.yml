@@ -31,9 +31,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build static export
+      - name: Patch next.config.js for static export
         run: |
-          npx next build
+          node -e "
+          const fs = require('fs');
+          let c = fs.readFileSync('next.config.js','utf8');
+          c = c.replace(
+            'images: { remotePatterns: [{ protocol: \"https\", hostname: \"images.unsplash.com\" }] }',
+            'images: { remotePatterns: [{ protocol: \"https\", hostname: \"images.unsplash.com\" }], unoptimized: true }'
+          );
+          if (!c.includes('output:')) {
+            c = c.replace('reactStrictMode: true,', 'reactStrictMode: true,\n  output: \"export\",');
+          }
+          fs.writeFileSync('next.config.js', c);
+          "
+
+      - name: Build static export
+        run: npx next build
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
@@ -47,24 +61,15 @@ jobs:
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug
 
-      - name: Build release APK
-        working-directory: android
-        run: ./gradlew assembleRelease
-        continue-on-error: true
-
       - name: Copy APK
-        run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk FinTrack.apk || true
-          cp android/app/build/outputs/apk/release/app-release-unsigned.apk FinTrack-release.apk || true
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk FinTrack.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: apk
-          path: |
-            FinTrack.apk
-            FinTrack-release.apk
-          if-no-files-found: warn
+          path: FinTrack.apk
+          if-no-files-found: error
 
   build-exe:
     runs-on: windows-latest
@@ -87,7 +92,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Next.js static export
+      - name: Patch next.config.js for static export
+        run: |
+          node -e "const fs=require('fs');let c=fs.readFileSync('next.config.js','utf8');c=c.replace('images:{remotePatterns:[{protocol:\"https\",hostname:\"images.unsplash.com\"}]}','images:{remotePatterns:[{protocol:\"https\",hostname:\"images.unsplash.com\"}],unoptimized:true}');if(!c.includes('output:')){c=c.replace('reactStrictMode: true,','reactStrictMode: true,\n  output: \"export\",');}fs.writeFileSync('next.config.js',c);"
+
+      - name: Build static export
         run: npx next build
         env:
           NEXT_TELEMETRY_DISABLED: 1
