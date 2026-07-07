@@ -51,8 +51,8 @@ tunnel.txt
 android/
 ios/
 
-# tauri
-src-tauri/
+# tauri build artifacts
+src-tauri/target/
 
 dev.db
 stdout.log
