@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  currency  String   @default("USD")
+  theme     String   @default("dark")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions    Transaction[]
+  categories      Category[]
+  accounts        Account[]
+  budgets         Budget[]
+  bills           Bill[]
+  savingsGoals    SavingsGoal[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  type        String
+  amount      Float
+  description String
+  date        DateTime
+  isRecurring Boolean  @default(false)
+  recurringId String?
+  tags        String   @default("[]")
+  createdAt   DateTime @default(now())
+
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id])
+  accountId  String
+  account    Account   @relation(fields: [accountId], references: [id])
+}
+
+model Category {
+  id       String @id @default(cuid())
+  name     String
+  icon     String
+  color    String
+  type     String
+  isCustom Boolean @default(false)
+
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+  bills        Bill[]
+}
+
+model Account {
+  id       String @id @default(cuid())
+  name     String
+  type     String
+  balance  Float  @default(0)
+  currency String @default("USD")
+  color    String
+  icon     String
+
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model Budget {
+  id         String @id @default(cuid())
+  amount     Float
+  period     String
+  startDate  String
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+}
+
+model Bill {
+  id        String  @id @default(cuid())
+  name      String
+  amount    Float
+  dueDate   String
+  frequency String
+  status    String  @default("upcoming")
+  isAutoPay Boolean @default(false)
+  notes     String?
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+}
+
+model SavingsGoal {
+  id            String @id @default(cuid())
+  name          String
+  targetAmount  Float
+  currentAmount Float @default(0)
+  deadline      String
+  icon          String
+  color         String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
