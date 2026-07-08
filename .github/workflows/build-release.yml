@@ -31,21 +31,13 @@ jobs:
       - run: npm ci
 
       - name: Prepare static export
-        run: |
-          rm -rf src/app/api
-          cat > next.config.js << 'EOF'
-          /** @type {import('next').NextConfig} */
-          const nextConfig = {
-            reactStrictMode: true,
-            output: "export",
-            images: { unoptimized: true },
-          };
-          module.exports = nextConfig;
-          EOF
+        run: node prepare-export.js
 
       - run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
 
-      - run: npx cap add android
+      - run: npx cap add android || true
       - run: npx cap sync android
 
       - name: Build APK
@@ -82,20 +74,11 @@ jobs:
         run: npm install --save-dev @tauri-apps/cli
 
       - name: Prepare static export
-        shell: bash
-        run: |
-          rm -rf src/app/api
-          cat > next.config.js << 'ENDOFFILE'
-          /** @type {import('next').NextConfig} */
-          const nextConfig = {
-            reactStrictMode: true,
-            output: "export",
-            images: { unoptimized: true },
-          };
-          module.exports = nextConfig;
-          ENDOFFILE
+        run: node prepare-export.js
 
       - run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
 
       - run: npx tauri build
         env:
