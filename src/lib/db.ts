@@ -1,42 +1,21 @@
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-
-function ensureDir(dir: string) {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-}
-
-function userDir(userId: string) {
-  const dir = path.join(DATA_DIR, userId);
-  ensureDir(dir);
-  return dir;
-}
-
-function filePath(userId: string, file: string) {
-  return path.join(userDir(userId), `${file}.json`);
-}
+const memStore = new Map<string, unknown>();
 
 function readJSON<T>(userId: string, file: string, fallback: T): T {
-  const fp = filePath(userId, file);
-  try {
-    if (!fs.existsSync(fp)) return fallback;
-    return JSON.parse(fs.readFileSync(fp, "utf-8"));
-  } catch {
-    return fallback;
-  }
+  const key = `${userId}:${file}`;
+  if (memStore.has(key)) return memStore.get(key) as T;
+  return fallback;
 }
 
 function writeJSON(userId: string, file: string, data: unknown) {
-  fs.writeFileSync(filePath(userId, file), JSON.stringify(data, null, 2), "utf-8");
+  memStore.set(`${userId}:${file}`, data);
 }
 
 export function genId() {
   return crypto.randomBytes(12).toString("base64url");
 }
 
-// ===== Profile =====
 export interface UserProfile {
   id: string;
   name: string;
@@ -47,13 +26,10 @@ export interface UserProfile {
   createdAt: string;
 }
 
+const allUsers = new Map<string, UserProfile>();
+
 export function getAllUsers(): UserProfile[] {
-  ensureDir(DATA_DIR);
-  const dirs = fs.readdirSync(DATA_DIR).filter((d) => {
-    const fp = path.join(DATA_DIR, d, "profile.json");
-    return fs.existsSync(fp);
-  });
-  return dirs.map((d) => readJSON<UserProfile>(d, "profile", null!)).filter(Boolean);
+  return Array.from(allUsers.values());
 }
 
 export function findUserByEmail(email: string): (UserProfile & { userId: string }) | null {
@@ -63,12 +39,12 @@ export function findUserByEmail(email: string): (UserProfile & { userId: string 
 }
 
 export function findUserById(userId: string): UserProfile | null {
-  return readJSON<UserProfile>(userId, "profile", null!);
+  return allUsers.get(userId) || null;
 }
 
 export function createUser(data: Omit<UserProfile, "createdAt">): UserProfile {
   const profile: UserProfile = { ...data, createdAt: new Date().toISOString() };
-  writeJSON(data.id, "profile", profile);
+  allUsers.set(data.id, profile);
   return profile;
 }
 
@@ -76,11 +52,10 @@ export function updateUser(userId: string, data: Partial<UserProfile>) {
   const profile = findUserById(userId);
   if (!profile) return null;
   const updated = { ...profile, ...data };
-  writeJSON(userId, "profile", updated);
+  allUsers.set(userId, updated);
   return updated;
 }
 
-// ===== Generic CRUD for any entity =====
 export interface Entity {
   id: string;
   [key: string]: unknown;
@@ -120,7 +95,6 @@ export function findEntity<T extends Entity>(userId: string, file: string, id: s
   return entities.find((e) => e.id === id) || null;
 }
 
-// ===== File names =====
 export const FILES = {
   transactions: "transactions",
   categories: "categories",
