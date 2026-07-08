@@ -30,10 +30,18 @@ jobs:
 
       - run: npm ci
 
-      - name: Patch config for static export
+      - name: Prepare static export
         run: |
-          sed -i 's|reactStrictMode: true,|reactStrictMode: true,\n  output: "export",\n  images: { unoptimized: true },|' next.config.js
           rm -rf src/app/api
+          cat > next.config.js << 'EOF'
+          /** @type {import('next').NextConfig} */
+          const nextConfig = {
+            reactStrictMode: true,
+            output: "export",
+            images: { unoptimized: true },
+          };
+          module.exports = nextConfig;
+          EOF
 
       - run: npx next build
 
@@ -70,15 +78,24 @@ jobs:
 
       - run: npm ci
 
-      - name: Patch config for static export
+      - name: Install Tauri CLI
+        run: npm install --save-dev @tauri-apps/cli
+
+      - name: Prepare static export
         shell: bash
         run: |
-          sed -i 's|reactStrictMode: true,|reactStrictMode: true,\n  output: "export",\n  images: { unoptimized: true },|' next.config.js
           rm -rf src/app/api
+          cat > next.config.js << 'ENDOFFILE'
+          /** @type {import('next').NextConfig} */
+          const nextConfig = {
+            reactStrictMode: true,
+            output: "export",
+            images: { unoptimized: true },
+          };
+          module.exports = nextConfig;
+          ENDOFFILE
 
       - run: npx next build
-
-      - run: npm install --save-dev @tauri-apps/cli
 
       - run: npx tauri build
         env:
