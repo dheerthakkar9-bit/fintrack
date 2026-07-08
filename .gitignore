@@ -57,3 +57,16 @@ src-tauri/target/
 dev.db
 stdout.log
 *.log
+
+# build artifacts
+_out/
+out/
+*.bak
+server.js
+gh-bin/
+gh.zip
+index.html
+build-exe-local.bat
+src/app/_api_backup/
+FinTrack.exe
+FinTrack.apk
