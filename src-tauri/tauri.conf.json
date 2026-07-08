@@ -6,11 +6,9 @@
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npx next build && npx next export"
+    "beforeBuildCommand": ""
   },
   "app": {
-    "title": "FinTrack",
     "windows": [
       {
         "title": "FinTrack",
