@@ -8,13 +8,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const existing = findEntity(userId, FILES.accounts, id);
+    const existing = await findEntity(userId, FILES.accounts, id);
     if (!existing) return errorResponse("Account not found", 404);
 
     const body = await req.json();
     const { name, type, balance, currency, color, icon } = body;
 
-    const account = updateEntity(userId, FILES.accounts, id, {
+    const account = await updateEntity(userId, FILES.accounts, id, {
       ...(name && { name }),
       ...(type && { type }),
       ...(balance !== undefined && { balance: parseFloat(balance) }),
@@ -35,10 +35,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const existing = findEntity(userId, FILES.accounts, id);
+    const existing = await findEntity(userId, FILES.accounts, id);
     if (!existing) return errorResponse("Account not found", 404);
 
-    deleteEntity(userId, FILES.accounts, id);
+    await deleteEntity(userId, FILES.accounts, id);
     return successResponse({ message: "Account deleted" });
   } catch (error) {
     return errorResponse("Failed to delete account", 500);

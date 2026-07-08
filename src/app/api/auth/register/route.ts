@@ -24,13 +24,13 @@ export async function POST(req: NextRequest) {
     if (!password || password.length < 6)
       return errorResponse("Password must be at least 6 characters");
 
-    const existing = findUserByEmail(email);
+    const existing = await findUserByEmail(email);
     if (existing) return errorResponse("Email already in use", 409);
 
     const hashedPassword = await hashPassword(password);
     const userId = genId();
 
-    createUser({
+    await createUser({
       id: userId,
       name,
       email,
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     });
 
     for (const c of INCOME_CATEGORIES) {
-      createEntity(userId, "categories", {
+      await createEntity(userId, "categories", {
         name: c.name,
         icon: c.icon,
         color: c.color,
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       });
     }
     for (const c of EXPENSE_CATEGORIES) {
-      createEntity(userId, "categories", {
+      await createEntity(userId, "categories", {
         name: c.name,
         icon: c.icon,
         color: c.color,
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       });
     }
     for (const acc of DEFAULT_ACCOUNTS) {
-      createEntity(userId, "accounts", {
+      await createEntity(userId, "accounts", {
         name: acc.name,
         type: acc.type,
         balance: 0,

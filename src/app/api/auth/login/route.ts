@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     if (!email || !password)
       return errorResponse("Email and password are required");
 
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
     if (!user) return errorResponse("Invalid email or password", 401);
 
     const isValid = await comparePassword(password, user.password);

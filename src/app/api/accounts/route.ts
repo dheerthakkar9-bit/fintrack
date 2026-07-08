@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const userId = await getUserIdFromRequest(req);
     if (!userId) return errorResponse("Unauthorized", 401);
 
-    const accounts = listEntities(userId, FILES.accounts);
+    const accounts = await listEntities(userId, FILES.accounts);
     accounts.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
 
     return successResponse(accounts);
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return errorResponse("Name, type, and balance are required", 400);
     }
 
-    const account = createEntity(userId, FILES.accounts, {
+    const account = await createEntity(userId, FILES.accounts, {
       name,
       type,
       balance: parseFloat(balance),

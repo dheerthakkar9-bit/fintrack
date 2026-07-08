@@ -1,15 +1,15 @@
+import { Redis } from "@upstash/redis";
 import crypto from "crypto";
 
-const memStore = new Map<string, unknown>();
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "",
+  token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "",
+});
 
-function readJSON<T>(userId: string, file: string, fallback: T): T {
-  const key = `${userId}:${file}`;
-  if (memStore.has(key)) return memStore.get(key) as T;
-  return fallback;
-}
+const PREFIX = "fintrack";
 
-function writeJSON(userId: string, file: string, data: unknown) {
-  memStore.set(`${userId}:${file}`, data);
+function userKey(userId: string, file: string) {
+  return `${PREFIX}:${userId}:${file}`;
 }
 
 export function genId() {
@@ -26,33 +26,42 @@ export interface UserProfile {
   createdAt: string;
 }
 
-const allUsers = new Map<string, UserProfile>();
-
-export function getAllUsers(): UserProfile[] {
-  return Array.from(allUsers.values());
+export async function getAllUsers(): Promise<UserProfile[]> {
+  const keys = await redis.keys(`${PREFIX}:users:*`);
+  if (!keys.length) return [];
+  const profiles = await redis.mget(...keys);
+  return profiles.filter(Boolean) as UserProfile[];
 }
 
-export function findUserByEmail(email: string): (UserProfile & { userId: string }) | null {
-  const users = getAllUsers();
-  const user = users.find((u) => u.email === email);
-  return user ? { ...user, userId: user.id } : null;
+export async function findUserByEmail(email: string): Promise<(UserProfile & { userId: string }) | null> {
+  const emailKey = `${PREFIX}:email:${email}`;
+  const userId = await redis.get<string>(emailKey);
+  if (!userId) return null;
+  const profile = await redis.get<UserProfile>(`${PREFIX}:users:${userId}`);
+  if (!profile) return null;
+  return { ...profile, userId: profile.id };
 }
 
-export function findUserById(userId: string): UserProfile | null {
-  return allUsers.get(userId) || null;
+export async function findUserById(userId: string): Promise<UserProfile | null> {
+  return await redis.get<UserProfile>(`${PREFIX}:users:${userId}`);
 }
 
-export function createUser(data: Omit<UserProfile, "createdAt">): UserProfile {
+export async function createUser(data: Omit<UserProfile, "createdAt">): Promise<UserProfile> {
   const profile: UserProfile = { ...data, createdAt: new Date().toISOString() };
-  allUsers.set(data.id, profile);
+  await redis.set(`${PREFIX}:users:${data.id}`, profile);
+  await redis.set(`${PREFIX}:email:${data.email}`, data.id);
   return profile;
 }
 
-export function updateUser(userId: string, data: Partial<UserProfile>) {
-  const profile = findUserById(userId);
+export async function updateUser(userId: string, data: Partial<UserProfile>) {
+  const profile = await findUserById(userId);
   if (!profile) return null;
   const updated = { ...profile, ...data };
-  allUsers.set(userId, updated);
+  await redis.set(`${PREFIX}:users:${userId}`, updated);
+  if (data.email && data.email !== profile.email) {
+    await redis.del(`${PREFIX}:email:${profile.email}`);
+    await redis.set(`${PREFIX}:email:${data.email}`, userId);
+  }
   return updated;
 }
 
@@ -61,37 +70,38 @@ export interface Entity {
   [key: string]: unknown;
 }
 
-export function listEntities<T extends Entity>(userId: string, file: string): T[] {
-  return readJSON<T[]>(userId, file, []);
+export async function listEntities<T extends Entity>(userId: string, file: string): Promise<T[]> {
+  const data = await redis.get<T[]>(userKey(userId, file));
+  return data || [];
 }
 
-export function createEntity<T extends Entity>(userId: string, file: string, data: Omit<T, "id">): T {
-  const entities = listEntities<T>(userId, file);
+export async function createEntity<T extends Entity>(userId: string, file: string, data: Omit<T, "id">): Promise<T> {
+  const entities = await listEntities<T>(userId, file);
   const entity = { ...data, id: genId() } as T;
   entities.push(entity);
-  writeJSON(userId, file, entities);
+  await redis.set(userKey(userId, file), entities);
   return entity;
 }
 
-export function updateEntity<T extends Entity>(userId: string, file: string, id: string, data: Partial<T>): T | null {
-  const entities = listEntities<T>(userId, file);
+export async function updateEntity<T extends Entity>(userId: string, file: string, id: string, data: Partial<T>): Promise<T | null> {
+  const entities = await listEntities<T>(userId, file);
   const idx = entities.findIndex((e) => e.id === id);
   if (idx === -1) return null;
   entities[idx] = { ...entities[idx], ...data };
-  writeJSON(userId, file, entities);
+  await redis.set(userKey(userId, file), entities);
   return entities[idx];
 }
 
-export function deleteEntity<T extends Entity>(userId: string, file: string, id: string): boolean {
-  const entities = listEntities<T>(userId, file);
+export async function deleteEntity<T extends Entity>(userId: string, file: string, id: string): Promise<boolean> {
+  const entities = await listEntities<T>(userId, file);
   const filtered = entities.filter((e) => e.id !== id);
   if (filtered.length === entities.length) return false;
-  writeJSON(userId, file, filtered);
+  await redis.set(userKey(userId, file), filtered);
   return true;
 }
 
-export function findEntity<T extends Entity>(userId: string, file: string, id: string): T | null {
-  const entities = listEntities<T>(userId, file);
+export async function findEntity<T extends Entity>(userId: string, file: string, id: string): Promise<T | null> {
+  const entities = await listEntities<T>(userId, file);
   return entities.find((e) => e.id === id) || null;
 }
 

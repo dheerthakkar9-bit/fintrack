@@ -8,13 +8,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const existing = findEntity(userId, FILES.savings, id);
+    const existing = await findEntity(userId, FILES.savings, id);
     if (!existing) return errorResponse("Savings goal not found", 404);
 
     const body = await req.json();
     const { name, targetAmount, currentAmount, deadline, icon, color } = body;
 
-    const goal = updateEntity(userId, FILES.savings, id, {
+    const goal = await updateEntity(userId, FILES.savings, id, {
       ...(name && { name }),
       ...(targetAmount && { targetAmount: parseFloat(targetAmount) }),
       ...(currentAmount !== undefined && { currentAmount: parseFloat(currentAmount) }),
@@ -35,10 +35,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const existing = findEntity(userId, FILES.savings, id);
+    const existing = await findEntity(userId, FILES.savings, id);
     if (!existing) return errorResponse("Savings goal not found", 404);
 
-    deleteEntity(userId, FILES.savings, id);
+    await deleteEntity(userId, FILES.savings, id);
     return successResponse({ message: "Savings goal deleted" });
   } catch (error) {
     return errorResponse("Failed to delete savings goal", 500);

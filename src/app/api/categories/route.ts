@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const userId = await getUserIdFromRequest(req);
     if (!userId) return errorResponse("Unauthorized", 401);
 
-    const categories = listEntities(userId, FILES.categories);
+    const categories = await listEntities(userId, FILES.categories);
     categories.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
 
     return successResponse(categories);
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return errorResponse("Name and type are required", 400);
     }
 
-    const category = createEntity(userId, FILES.categories, {
+    const category = await createEntity(userId, FILES.categories, {
       name,
       icon: icon || null,
       color: color || null,

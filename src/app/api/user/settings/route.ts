@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const { name, email, currency, theme } = body;
 
-    const updated = updateUser(userId, {
+    const updated = await updateUser(userId, {
       ...(name && { name }),
       ...(email && { email }),
       ...(currency && { currency }),

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const transaction = findEntity(userId, FILES.transactions, id);
+    const transaction = await findEntity(userId, FILES.transactions, id);
 
     if (!transaction) return errorResponse("Transaction not found", 404);
     return successResponse(transaction);
@@ -23,13 +23,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const existing = findEntity(userId, FILES.transactions, id);
+    const existing = await findEntity(userId, FILES.transactions, id);
     if (!existing) return errorResponse("Transaction not found", 404);
 
     const body = await req.json();
     const { type, amount, categoryId, accountId, description, date, isRecurring, tags } = body;
 
-    const transaction = updateEntity(userId, FILES.transactions, id, {
+    const transaction = await updateEntity(userId, FILES.transactions, id, {
       ...(type && { type }),
       ...(amount && { amount: parseFloat(amount) }),
       ...(categoryId && { categoryId }),
@@ -52,10 +52,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const existing = findEntity(userId, FILES.transactions, id);
+    const existing = await findEntity(userId, FILES.transactions, id);
     if (!existing) return errorResponse("Transaction not found", 404);
 
-    deleteEntity(userId, FILES.transactions, id);
+    await deleteEntity(userId, FILES.transactions, id);
     return successResponse({ message: "Transaction deleted" });
   } catch (error) {
     return errorResponse("Failed to delete transaction", 500);

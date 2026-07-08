@@ -8,13 +8,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const existing = findEntity(userId, FILES.bills, id);
+    const existing = await findEntity(userId, FILES.bills, id);
     if (!existing) return errorResponse("Bill not found", 404);
 
     const body = await req.json();
     const { name, amount, categoryId, dueDate, frequency, isAutoPay, notes } = body;
 
-    const bill = updateEntity(userId, FILES.bills, id, {
+    const bill = await updateEntity(userId, FILES.bills, id, {
       ...(name && { name }),
       ...(amount && { amount: parseFloat(amount) }),
       ...(categoryId && { categoryId }),
@@ -36,10 +36,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!userId) return errorResponse("Unauthorized", 401);
 
     const { id } = await params;
-    const existing = findEntity(userId, FILES.bills, id);
+    const existing = await findEntity(userId, FILES.bills, id);
     if (!existing) return errorResponse("Bill not found", 404);
 
-    deleteEntity(userId, FILES.bills, id);
+    await deleteEntity(userId, FILES.bills, id);
     return successResponse({ message: "Bill deleted" });
   } catch (error) {
     return errorResponse("Failed to delete bill", 500);

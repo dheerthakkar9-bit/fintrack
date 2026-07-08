@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
     const sortBy = searchParams.get("sortBy") || "date-desc";
 
-    let transactions = listEntities(userId, FILES.transactions);
+    let transactions = await listEntities(userId, FILES.transactions);
 
     if (type) transactions = transactions.filter((t: any) => t.type === type);
     if (categoryId) transactions = transactions.filter((t: any) => t.categoryId === categoryId);
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       return errorResponse("Missing required fields", 400);
     }
 
-    const transaction = createEntity(userId, FILES.transactions, {
+    const transaction = await createEntity(userId, FILES.transactions, {
       type,
       amount: parseFloat(amount),
       categoryId,

@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const userId = await getUserIdFromRequest(req);
     if (!userId) return errorResponse("Unauthorized", 401);
 
-    const goals = listEntities(userId, FILES.savings);
+    const goals = await listEntities(userId, FILES.savings);
     goals.sort((a: any, b: any) => (a.deadline || "").localeCompare(b.deadline || ""));
 
     return successResponse(goals);
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return errorResponse("Missing required fields", 400);
     }
 
-    const goal = createEntity(userId, FILES.savings, {
+    const goal = await createEntity(userId, FILES.savings, {
       name,
       targetAmount: parseFloat(targetAmount),
       currentAmount: currentAmount ? parseFloat(currentAmount) : 0,

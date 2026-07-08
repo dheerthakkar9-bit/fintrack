@@ -6,7 +6,7 @@ export async function GET(req: Request) {
     const userId = await getUserIdFromRequest(req);
     if (!userId) return errorResponse("Unauthorized", 401);
 
-    const user = findUserById(userId);
+    const user = await findUserById(userId);
     if (!user) return errorResponse("User not found", 404);
 
     return successResponse({
