@@ -32,8 +32,8 @@ jobs:
 
       - name: Patch config for static export
         run: |
-          sed -i 's/reactStrictMode: true,/reactStrictMode: true,\n  output: "export",/' next.config.js
-          sed -i 's/remotePatterns: \[{ protocol: "https", hostname: "images.unsplash.com" }\]/remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }], unoptimized: true/' next.config.js
+          sed -i 's|reactStrictMode: true,|reactStrictMode: true,\n  output: "export",\n  images: { unoptimized: true },|' next.config.js
+          rm -rf src/app/api
 
       - run: npx next build
 
@@ -73,8 +73,8 @@ jobs:
       - name: Patch config for static export
         shell: bash
         run: |
-          sed -i 's/reactStrictMode: true,/reactStrictMode: true,\n  output: "export",/' next.config.js
-          sed -i 's/remotePatterns: \[{ protocol: "https", hostname: "images.unsplash.com" }\]/remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }], unoptimized: true/' next.config.js
+          sed -i 's|reactStrictMode: true,|reactStrictMode: true,\n  output: "export",\n  images: { unoptimized: true },|' next.config.js
+          rm -rf src/app/api
 
       - run: npx next build
 
