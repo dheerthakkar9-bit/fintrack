@@ -1,17 +1,21 @@
 import crypto from "crypto";
-import { Redis } from "@upstash/redis";
 
 let redis: any = null;
 let redisChecked = false;
 
-function getRedis() {
+async function getRedis() {
   if (redisChecked) return redis;
   redisChecked = true;
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return null;
-  redis = new Redis({ url, token });
-  return redis;
+  try {
+    const mod = await import("@upstash/redis");
+    redis = new mod.Redis({ url, token });
+    return redis;
+  } catch {
+    return null;
+  }
 }
 
 const memStore = new Map<string, unknown>();
@@ -37,10 +41,8 @@ export interface UserProfile {
   createdAt: string;
 }
 
-// ===== Profile =====
-
 export async function getAllUsers(): Promise<UserProfile[]> {
-  const r = getRedis();
+  const r = await getRedis();
   if (r) {
     const keys = await r.keys(`${PREFIX}:users:*`);
     if (!keys.length) return [];
@@ -51,7 +53,7 @@ export async function getAllUsers(): Promise<UserProfile[]> {
 }
 
 export async function findUserByEmail(email: string): Promise<(UserProfile & { userId: string }) | null> {
-  const r = getRedis();
+  const r = await getRedis();
   if (r) {
     const userId = await r.get<string>(`${PREFIX}:email:${email}`);
     if (!userId) return null;
@@ -65,14 +67,14 @@ export async function findUserByEmail(email: string): Promise<(UserProfile & { u
 }
 
 export async function findUserById(userId: string): Promise<UserProfile | null> {
-  const r = getRedis();
+  const r = await getRedis();
   if (r) return await r.get<UserProfile>(`${PREFIX}:users:${userId}`);
   return allUsers.get(userId) || null;
 }
 
 export async function createUser(data: Omit<UserProfile, "createdAt">): Promise<UserProfile> {
   const profile: UserProfile = { ...data, createdAt: new Date().toISOString() };
-  const r = getRedis();
+  const r = await getRedis();
   if (r) {
     await r.set(`${PREFIX}:users:${data.id}`, profile);
     await r.set(`${PREFIX}:email:${data.email}`, data.id);
@@ -86,7 +88,7 @@ export async function updateUser(userId: string, data: Partial<UserProfile>) {
   const profile = await findUserById(userId);
   if (!profile) return null;
   const updated = { ...profile, ...data };
-  const r = getRedis();
+  const r = await getRedis();
   if (r) {
     await r.set(`${PREFIX}:users:${userId}`, updated);
     if (data.email && data.email !== profile.email) {
@@ -99,15 +101,13 @@ export async function updateUser(userId: string, data: Partial<UserProfile>) {
   return updated;
 }
 
-// ===== Generic CRUD =====
-
 export interface Entity {
   id: string;
   [key: string]: unknown;
 }
 
 export async function listEntities<T extends Entity>(userId: string, file: string): Promise<T[]> {
-  const r = getRedis();
+  const r = await getRedis();
   if (r) return (await r.get<T[]>(userKey(userId, file))) || [];
   return (memStore.get(`${userId}:${file}`) as T[]) || [];
 }
@@ -116,7 +116,7 @@ export async function createEntity<T extends Entity>(userId: string, file: strin
   const entities = await listEntities<T>(userId, file);
   const entity = { ...data, id: genId() } as T;
   entities.push(entity);
-  const r = getRedis();
+  const r = await getRedis();
   if (r) {
     await r.set(userKey(userId, file), entities);
   } else {
@@ -130,7 +130,7 @@ export async function updateEntity<T extends Entity>(userId: string, file: strin
   const idx = entities.findIndex((e) => e.id === id);
   if (idx === -1) return null;
   entities[idx] = { ...entities[idx], ...data };
-  const r = getRedis();
+  const r = await getRedis();
   if (r) {
     await r.set(userKey(userId, file), entities);
   } else {
@@ -143,7 +143,7 @@ export async function deleteEntity<T extends Entity>(userId: string, file: strin
   const entities = await listEntities<T>(userId, file);
   const filtered = entities.filter((e) => e.id !== id);
   if (filtered.length === entities.length) return false;
-  const r = getRedis();
+  const r = await getRedis();
   if (r) {
     await r.set(userKey(userId, file), filtered);
   } else {
