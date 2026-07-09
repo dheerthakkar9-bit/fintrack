@@ -1,5 +1,6 @@
 import crypto from "crypto";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let redis: any = null;
 let redisChecked = false;
 
@@ -19,7 +20,7 @@ async function getRedis() {
 }
 
 const memStore = new Map<string, unknown>();
-const allUsers = new Map<string, any>();
+const allUsers = new Map<string, UserProfile>();
 
 const PREFIX = "fintrack";
 
@@ -44,7 +45,7 @@ export interface UserProfile {
 export async function getAllUsers(): Promise<UserProfile[]> {
   const r = await getRedis();
   if (r) {
-    const keys = await r.keys(`${PREFIX}:users:*`);
+    const keys: string[] = await r.keys(`${PREFIX}:users:*`);
     if (!keys.length) return [];
     const profiles = await r.mget(...keys);
     return profiles.filter(Boolean) as UserProfile[];
@@ -55,9 +56,9 @@ export async function getAllUsers(): Promise<UserProfile[]> {
 export async function findUserByEmail(email: string): Promise<(UserProfile & { userId: string }) | null> {
   const r = await getRedis();
   if (r) {
-    const userId = await r.get<string>(`${PREFIX}:email:${email}`);
+    const userId: string | null = await r.get(`${PREFIX}:email:${email}`);
     if (!userId) return null;
-    const profile = await r.get<UserProfile>(`${PREFIX}:users:${userId}`);
+    const profile: UserProfile | null = await r.get(`${PREFIX}:users:${userId}`);
     if (!profile) return null;
     return { ...profile, userId: profile.id };
   }
@@ -68,7 +69,10 @@ export async function findUserByEmail(email: string): Promise<(UserProfile & { u
 
 export async function findUserById(userId: string): Promise<UserProfile | null> {
   const r = await getRedis();
-  if (r) return await r.get<UserProfile>(`${PREFIX}:users:${userId}`);
+  if (r) {
+    const profile: UserProfile | null = await r.get(`${PREFIX}:users:${userId}`);
+    return profile;
+  }
   return allUsers.get(userId) || null;
 }
 
@@ -108,7 +112,10 @@ export interface Entity {
 
 export async function listEntities<T extends Entity>(userId: string, file: string): Promise<T[]> {
   const r = await getRedis();
-  if (r) return (await r.get<T[]>(userKey(userId, file))) || [];
+  if (r) {
+    const data: T[] | null = await r.get(userKey(userId, file));
+    return data || [];
+  }
   return (memStore.get(`${userId}:${file}`) as T[]) || [];
 }
 
